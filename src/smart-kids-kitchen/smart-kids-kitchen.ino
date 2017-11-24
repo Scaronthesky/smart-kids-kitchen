@@ -33,7 +33,9 @@ uint32_t brightRed = strip.Color(255, 0, 0);
 uint32_t darkGreen = strip.Color(0, 63, 0);
 uint32_t mediumGreen = strip.Color(0, 127, 0);
 uint32_t brightGreen = strip.Color(0, 255, 0);
+uint32_t mediumWhite = strip.Color(127, 127, 127);
 uint32_t white = strip.Color(255, 255, 255);
+
 uint32_t black = strip.Color(0, 0, 0);
 
 uint32_t ovenColors[] = {black, darkRed, mediumRed, brightRed};
@@ -56,12 +58,16 @@ void setup() {
   tmrpcm.volume(4);
   tmrpcm.quality(0);
 
+  // setup light switch
+  pinMode(2,INPUT_PULLUP);
+
 }
 
 void loop() {
 
   int ovenKnob = analogRead(A0) / 256;
   int microwaveKnob = analogRead(A1) / 256;
+  int lightSwitch = digitalRead(2);
 
   // Lesson learnt: Don't call the stripe.show() method while the tmrpcm is playing or the sound will be distorted!
 
@@ -129,6 +135,12 @@ void loop() {
       break;
     default:
       return;
+  }
+
+  if (lightSwitch == LOW) {
+    colorPart(3, mediumWhite);
+  } else {
+    colorPart(3, black);
   }
 
 }
