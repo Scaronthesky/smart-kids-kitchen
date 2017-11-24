@@ -4,8 +4,10 @@
 #include <TMRpcm.h>
 
 // Define pins
-#define SD_ChipSelectPin 4
-#define NeoPixel_Pin 6
+#define sdChipSelectPin 4
+#define loudSpeakerPin 9
+#define neoPixelPin 6
+#define numberOfLeds 60
 
 // Setup Adafruit NeoPixel stripe
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
@@ -20,14 +22,23 @@
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, NeoPixel_Pin, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(numberOfLeds, neoPixelPin, NEO_GRB + NEO_KHZ800);
 
 // Setup class for Wav file playback
 TMRpcm tmrpcm;
 
-uint32_t red = strip.Color(255, 0, 0);
-
+uint32_t darkRed = strip.Color(63, 0, 0);
+uint32_t mediumRed = strip.Color(127, 0, 0);
+uint32_t brightRed = strip.Color(255, 0, 0);
+uint32_t green = strip.Color(0, 255, 0);
+uint32_t white = strip.Color(255, 255, 255);
 uint32_t black = strip.Color(0, 0, 0);
+
+unsigned long previousMillis = 0;
+
+const long interval = 3000;
+
+byte currentOvenKnobState = 0;
 
 void setup() {
 
@@ -36,27 +47,84 @@ void setup() {
   strip.show(); // Initialize all pixels to 'off'
 
   // Setup wav file play back
-  tmrpcm.speakerPin = 9;
-  if (!SD.begin(SD_ChipSelectPin)) {
+  tmrpcm.speakerPin = loudSpeakerPin;
+  if (!SD.begin(sdChipSelectPin)) {
     return;
   }
-  tmrpcm.volume(1);
+  tmrpcm.volume(4);
+  tmrpcm.quality(0);
 
 }
 
 void loop() {
 
-  int sensorValue = analogRead(A0);
+  int ovenKnob = analogRead(A0) / 256;
 
-  if (sensorValue > 1024 / 2) {
-    colorAll(red);
+  // Lesson learnt: Don't call the stripe.show() method while the tmrpcm is playing or the sound will be distorted!
+
+  if (currentOvenKnobState > 0 && !tmrpcm.isPlaying()) {
+    // TODO use playSound()
     tmrpcm.play("6.wav");
-  } else {
-    colorAll(black);
+  }
+
+  switch (ovenKnob) {
+    case 0:
+      if (currentOvenKnobState != 0) {
+        colorPart(1, black);
+        currentOvenKnobState = 0;
+      }
+      break;
+    case 1:
+      if (currentOvenKnobState != 1) {
+        colorPart(1, darkRed);
+        currentOvenKnobState = 1;
+      }
+      break;
+    case 2:
+      if (currentOvenKnobState != 2) {
+        colorPart(1, mediumRed);
+        currentOvenKnobState = 2;
+      }
+      break;
+    case 3:
+      if (currentOvenKnobState != 3) {
+        colorPart(1, brightRed);
+        currentOvenKnobState = 3;
+      }
+      break;
+    default:
+      return;
+  }
+
+}
+
+void playSound(char fileName) {
+  tmrpcm.play(fileName);
+}
+
+// Set one of three parts to a color
+void colorPart(byte part, uint32_t color) {
+  byte firstLed, lastLed;
+  switch (part) {
+    case 1:
+      firstLed = 0;
+      lastLed = 19;
+      break;
+    case 2:
+      firstLed = 20;
+      lastLed = 39;
+      break;
+    case 3:
+      firstLed = 40;
+      lastLed = 59;
+      break;
+    default:
+      return;
+  }
+  for (uint16_t i = firstLed; i <= lastLed; i++) {
+    strip.setPixelColor(i, color);
   }
   strip.show();
-  delay(1000);
-
 }
 
 // Set all the LEDs to one color
@@ -67,87 +135,3 @@ void colorAll(uint32_t c) {
   strip.show();
 }
 
-// Fill the dots one after the other with a color
-void colorWipe(uint32_t c, uint8_t wait) {
-  for (uint16_t i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, c);
-    strip.show();
-    delay(wait);
-  }
-}
-
-void rainbow(uint8_t wait) {
-  uint16_t i, j;
-
-  for (j = 0; j < 256; j++) {
-    for (i = 0; i < strip.numPixels(); i++) {
-      strip.setPixelColor(i, Wheel((i + j) & 255));
-    }
-    strip.show();
-    delay(wait);
-  }
-}
-
-// Slightly different, this makes the rainbow equally distributed throughout
-void rainbowCycle(uint8_t wait) {
-  uint16_t i, j;
-
-  for (j = 0; j < 256 * 5; j++) { // 5 cycles of all colors on wheel
-    for (i = 0; i < strip.numPixels(); i++) {
-      strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
-    }
-    strip.show();
-    delay(wait);
-  }
-}
-
-//Theatre-style crawling lights.
-void theaterChase(uint32_t c, uint8_t wait) {
-  for (int j = 0; j < 10; j++) { //do 10 cycles of chasing
-    for (int q = 0; q < 3; q++) {
-      for (uint16_t i = 0; i < strip.numPixels(); i = i + 3) {
-        strip.setPixelColor(i + q, c);  //turn every third pixel on
-      }
-      strip.show();
-
-      delay(wait);
-
-      for (uint16_t i = 0; i < strip.numPixels(); i = i + 3) {
-        strip.setPixelColor(i + q, 0);      //turn every third pixel off
-      }
-    }
-  }
-}
-
-//Theatre-style crawling lights with rainbow effect
-void theaterChaseRainbow(uint8_t wait) {
-  for (int j = 0; j < 256; j++) {   // cycle all 256 colors in the wheel
-    for (int q = 0; q < 3; q++) {
-      for (uint16_t i = 0; i < strip.numPixels(); i = i + 3) {
-        strip.setPixelColor(i + q, Wheel( (i + j) % 255)); //turn every third pixel on
-      }
-      strip.show();
-
-      delay(wait);
-
-      for (uint16_t i = 0; i < strip.numPixels(); i = i + 3) {
-        strip.setPixelColor(i + q, 0);      //turn every third pixel off
-      }
-    }
-  }
-}
-
-// Input a value 0 to 255 to get a color value.
-// The colours are a transition r - g - b - back to r.
-uint32_t Wheel(byte WheelPos) {
-  WheelPos = 255 - WheelPos;
-  if (WheelPos < 85) {
-    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  }
-  if (WheelPos < 170) {
-    WheelPos -= 85;
-    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-  }
-  WheelPos -= 170;
-  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-}
