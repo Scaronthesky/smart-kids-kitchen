@@ -30,15 +30,17 @@ TMRpcm tmrpcm;
 uint32_t darkRed = strip.Color(63, 0, 0);
 uint32_t mediumRed = strip.Color(127, 0, 0);
 uint32_t brightRed = strip.Color(255, 0, 0);
-uint32_t green = strip.Color(0, 255, 0);
+uint32_t darkGreen = strip.Color(0, 63, 0);
+uint32_t mediumGreen = strip.Color(0, 127, 0);
+uint32_t brightGreen = strip.Color(0, 255, 0);
 uint32_t white = strip.Color(255, 255, 255);
 uint32_t black = strip.Color(0, 0, 0);
 
-unsigned long previousMillis = 0;
-
-const long interval = 3000;
+uint32_t ovenColors[] = {black, darkRed, mediumRed, brightRed};
+uint32_t microwaveColors[] = {black, darkGreen, mediumGreen, brightGreen};
 
 byte currentOvenKnobState = 0;
+byte currentMicrowaveKnobState = 0;
 
 void setup() {
 
@@ -59,37 +61,70 @@ void setup() {
 void loop() {
 
   int ovenKnob = analogRead(A0) / 256;
+  int microwaveKnob = analogRead(A1) / 256;
 
   // Lesson learnt: Don't call the stripe.show() method while the tmrpcm is playing or the sound will be distorted!
 
-  if (currentOvenKnobState > 0 && !tmrpcm.isPlaying()) {
-    // TODO use playSound()
-    tmrpcm.play("6.wav");
+  if (currentOvenKnobState > 0 && currentMicrowaveKnobState == 0 && !tmrpcm.isPlaying()) {
+    tmrpcm.play("1.wav", 1);
+  } else if (currentOvenKnobState == 0 && currentMicrowaveKnobState > 0 && !tmrpcm.isPlaying()) {
+    tmrpcm.play("2.wav", 1 );
+  } else if (currentOvenKnobState > 0 && currentMicrowaveKnobState > 0 && !tmrpcm.isPlaying()) {
+    tmrpcm.play("4.wav", 1);
   }
 
   switch (ovenKnob) {
     case 0:
       if (currentOvenKnobState != 0) {
-        colorPart(1, black);
+        colorPart(1, ovenColors[0]);
         currentOvenKnobState = 0;
       }
       break;
     case 1:
       if (currentOvenKnobState != 1) {
-        colorPart(1, darkRed);
+        colorPart(1, ovenColors[1]);
         currentOvenKnobState = 1;
       }
       break;
     case 2:
       if (currentOvenKnobState != 2) {
-        colorPart(1, mediumRed);
+        colorPart(1, ovenColors[2]);
         currentOvenKnobState = 2;
       }
       break;
     case 3:
       if (currentOvenKnobState != 3) {
-        colorPart(1, brightRed);
+        colorPart(1, ovenColors[3]);
         currentOvenKnobState = 3;
+      }
+      break;
+    default:
+      return;
+  }
+
+  switch (microwaveKnob) {
+    case 0:
+      if (currentMicrowaveKnobState != 0) {
+        colorPart(2, microwaveColors[0]);
+        currentMicrowaveKnobState = 0;
+      }
+      break;
+    case 1:
+      if (currentMicrowaveKnobState != 1) {
+        colorPart(2, microwaveColors[1]);
+        currentMicrowaveKnobState = 1;
+      }
+      break;
+    case 2:
+      if (currentMicrowaveKnobState != 2) {
+        colorPart(2, microwaveColors[2]);
+        currentMicrowaveKnobState = 2;
+      }
+      break;
+    case 3:
+      if (currentMicrowaveKnobState != 3) {
+        colorPart(2, microwaveColors[3]);
+        currentMicrowaveKnobState = 3;
       }
       break;
     default:
