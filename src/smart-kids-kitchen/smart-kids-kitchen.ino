@@ -43,6 +43,7 @@ uint32_t microwaveColors[] = {black, darkGreen, mediumGreen, brightGreen};
 
 byte currentOvenKnobState = 0;
 byte currentMicrowaveKnobState = 0;
+byte currentLightSwitchState = 0;
 
 void setup() {
 
@@ -137,10 +138,12 @@ void loop() {
       return;
   }
 
-  if (lightSwitch == LOW) {
+  if (lightSwitch == LOW && currentLightSwitchState != 0) {
     colorPart(3, mediumWhite);
-  } else {
+    currentLightSwitchState = 0;
+  } else if (lightSwitch == HIGH && currentLightSwitchState != 1) {
     colorPart(3, black);
+    currentLightSwitchState = 1;
   }
 
 }
