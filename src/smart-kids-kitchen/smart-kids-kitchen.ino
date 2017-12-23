@@ -86,7 +86,7 @@ void setup() {
     digitalWrite(LED_BUILTIN, HIGH);
     return;
   }
-  tmrpcm.volume(4);
+  tmrpcm.volume(7);
   tmrpcm.quality(0);
 
 }
@@ -103,7 +103,7 @@ void loop() {
   if (currentOvenHeatKnobState > 0 && currentOvenModeKnobState > 0 && currentMicrowaveKnobState == 0 && !tmrpcm.isPlaying()) {
     //Serial.println("Play oven on sound");
     tmrpcm.play("1.wav", 1);
-  } else if (currentOvenHeatKnobState == 0 && currentOvenModeKnobState == 0 && currentMicrowaveKnobState > 0 && !tmrpcm.isPlaying()) {
+  } else if ((currentOvenHeatKnobState == 0 || currentOvenModeKnobState == 0) && currentMicrowaveKnobState > 0 && !tmrpcm.isPlaying()) {
     //Serial.println("Play microwave on sound");
     tmrpcm.play("2.wav", 1 );
   } else if (currentOvenHeatKnobState > 0 && currentOvenModeKnobState > 0 && currentMicrowaveKnobState > 0 && !tmrpcm.isPlaying()) {
