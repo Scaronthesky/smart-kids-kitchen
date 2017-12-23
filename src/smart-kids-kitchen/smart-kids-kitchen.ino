@@ -9,6 +9,9 @@
 #define neoPixelPin 6
 #define numberOfLeds 60
 
+// Setup class for Wav file playback
+TMRpcm tmrpcm;
+
 // Setup Adafruit NeoPixel stripe
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
 // pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
@@ -24,85 +27,146 @@
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(numberOfLeds, neoPixelPin, NEO_GRB + NEO_KHZ800);
 
-// Setup class for Wav file playback
-TMRpcm tmrpcm;
+// Initialize led stripe parts
+byte microwaveLedStripPart = 1;
+byte lightLedStripPart = 2;
+byte ovenLedStripPart = 3;
 
+// Define colors
 uint32_t darkRed = strip.Color(63, 0, 0);
 uint32_t mediumRed = strip.Color(127, 0, 0);
 uint32_t brightRed = strip.Color(255, 0, 0);
+
+uint32_t darkOrange = strip.Color(255, 60, 0);
+uint32_t mediumOrange = strip.Color(255, 83, 0);
+uint32_t brightOrange = strip.Color(255, 106, 0);
+
+uint32_t darkYellow = strip.Color(255, 205, 0);
+uint32_t mediumYellow = strip.Color(255, 225, 0);
+uint32_t brightYellow = strip.Color(255, 255, 0);
+
 uint32_t darkGreen = strip.Color(0, 63, 0);
 uint32_t mediumGreen = strip.Color(0, 127, 0);
 uint32_t brightGreen = strip.Color(0, 255, 0);
+
 uint32_t mediumWhite = strip.Color(127, 127, 127);
 uint32_t white = strip.Color(255, 255, 255);
 
 uint32_t black = strip.Color(0, 0, 0);
 
-uint32_t ovenColors[] = {black, darkRed, mediumRed, brightRed};
+uint32_t ovenColorsRed[] = {black, darkRed, mediumRed, brightRed};
+uint32_t ovenColorsOrange[] = {black, darkOrange, mediumOrange, brightOrange};
+uint32_t ovenColorsYellow[] = {black, darkYellow, mediumYellow, brightYellow};
 uint32_t microwaveColors[] = {black, darkGreen, mediumGreen, brightGreen};
 
-byte currentOvenKnobState = 0;
+// Initialize knob states
+byte currentOvenHeatKnobState = 0;
+byte currentOvenModeKnobState = 0;
 byte currentMicrowaveKnobState = 0;
 byte currentLightSwitchState = 0;
 
 void setup() {
 
+  // Enable debug logging
+  Serial.begin(9600);
+
   // Setup stripe
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
 
+  // setup light switch
+  pinMode(2, INPUT_PULLUP);
+
+  digitalWrite(LED_BUILTIN, LOW);
+
   // Setup wav file play back
   tmrpcm.speakerPin = loudSpeakerPin;
   if (!SD.begin(sdChipSelectPin)) {
+    digitalWrite(LED_BUILTIN, HIGH);
     return;
   }
   tmrpcm.volume(4);
   tmrpcm.quality(0);
 
-  // setup light switch
-  pinMode(2,INPUT_PULLUP);
-
 }
 
 void loop() {
 
-  int ovenKnob = analogRead(A0) / 256;
-  int microwaveKnob = analogRead(A1) / 256;
+  int ovenHeatKnob = analogRead(A0) / 256;
+  int ovenModeKnob = analogRead(A1) / 256;
+  int microwaveKnob = analogRead(A2) / 256;
   int lightSwitch = digitalRead(2);
 
   // Lesson learnt: Don't call the stripe.show() method while the tmrpcm is playing or the sound will be distorted!
 
-  if (currentOvenKnobState > 0 && currentMicrowaveKnobState == 0 && !tmrpcm.isPlaying()) {
+  if (currentOvenHeatKnobState > 0 && currentMicrowaveKnobState == 0 && !tmrpcm.isPlaying()) {
     tmrpcm.play("1.wav", 1);
-  } else if (currentOvenKnobState == 0 && currentMicrowaveKnobState > 0 && !tmrpcm.isPlaying()) {
+  } else if (currentOvenHeatKnobState == 0 && currentMicrowaveKnobState > 0 && !tmrpcm.isPlaying()) {
     tmrpcm.play("2.wav", 1 );
-  } else if (currentOvenKnobState > 0 && currentMicrowaveKnobState > 0 && !tmrpcm.isPlaying()) {
+  } else if (currentOvenHeatKnobState > 0 && currentMicrowaveKnobState > 0 && !tmrpcm.isPlaying()) {
     tmrpcm.play("4.wav", 1);
   }
 
-  switch (ovenKnob) {
+  switch (ovenHeatKnob) {
     case 0:
-      if (currentOvenKnobState != 0) {
-        colorPart(1, ovenColors[0]);
-        currentOvenKnobState = 0;
+      if (currentOvenHeatKnobState != 0) {
+        Serial.println("Oven heat 0");
+        colorPart(ovenLedStripPart, getOvenColor(currentOvenModeKnobState, ovenHeatKnob));
+        currentOvenHeatKnobState = 0;
       }
       break;
     case 1:
-      if (currentOvenKnobState != 1) {
-        colorPart(1, ovenColors[1]);
-        currentOvenKnobState = 1;
+      if (currentOvenHeatKnobState != 1) {
+        Serial.println("Oven heat 1");
+        colorPart(ovenLedStripPart, getOvenColor(currentOvenModeKnobState, ovenHeatKnob));
+        currentOvenHeatKnobState = 1;
       }
       break;
     case 2:
-      if (currentOvenKnobState != 2) {
-        colorPart(1, ovenColors[2]);
-        currentOvenKnobState = 2;
+      if (currentOvenHeatKnobState != 2) {
+        Serial.println("Oven heat 2");
+        colorPart(ovenLedStripPart, getOvenColor(currentOvenModeKnobState, ovenHeatKnob));
+        currentOvenHeatKnobState = 2;
       }
       break;
     case 3:
-      if (currentOvenKnobState != 3) {
-        colorPart(1, ovenColors[3]);
-        currentOvenKnobState = 3;
+      if (currentOvenHeatKnobState != 3) {
+        Serial.println("Oven heat 3");
+        colorPart(ovenLedStripPart, getOvenColor(currentOvenModeKnobState, ovenHeatKnob));
+        currentOvenHeatKnobState = 3;
+      }
+      break;
+    default:
+      return;
+  }
+
+  switch (ovenModeKnob) {
+    case 0:
+      if (currentOvenModeKnobState != 0) {
+        Serial.println("Oven mode 0");
+        colorPart(ovenLedStripPart, getOvenColor(ovenModeKnob, currentOvenHeatKnobState));
+        currentOvenModeKnobState = 0;
+      }
+      break;
+    case 1:
+      if (currentOvenModeKnobState != 1) {
+        Serial.println("Oven mode 1");
+        colorPart(ovenLedStripPart, getOvenColor(ovenModeKnob, currentOvenHeatKnobState));
+        currentOvenModeKnobState = 1;
+      }
+      break;
+    case 2:
+      if (currentOvenModeKnobState != 2) {
+        Serial.println("Oven mode 2");
+        colorPart(ovenLedStripPart, getOvenColor(ovenModeKnob, currentOvenHeatKnobState));
+        currentOvenModeKnobState = 2;
+      }
+      break;
+    case 3:
+      if (currentOvenModeKnobState != 3) {
+        Serial.println("Oven mode 3");
+        colorPart(ovenLedStripPart, getOvenColor(ovenModeKnob, currentOvenHeatKnobState));
+        currentOvenModeKnobState = 3;
       }
       break;
     default:
@@ -112,25 +176,29 @@ void loop() {
   switch (microwaveKnob) {
     case 0:
       if (currentMicrowaveKnobState != 0) {
-        colorPart(2, microwaveColors[0]);
+        Serial.println("Microwave mode 0");
+        colorPart(microwaveLedStripPart, microwaveColors[0]);
         currentMicrowaveKnobState = 0;
       }
       break;
     case 1:
       if (currentMicrowaveKnobState != 1) {
-        colorPart(2, microwaveColors[1]);
+        Serial.println("Microwave mode 1");
+        colorPart(microwaveLedStripPart, microwaveColors[1]);
         currentMicrowaveKnobState = 1;
       }
       break;
     case 2:
       if (currentMicrowaveKnobState != 2) {
-        colorPart(2, microwaveColors[2]);
+        Serial.println("Microwave mode 2");
+        colorPart(microwaveLedStripPart, microwaveColors[2]);
         currentMicrowaveKnobState = 2;
       }
       break;
     case 3:
       if (currentMicrowaveKnobState != 3) {
-        colorPart(2, microwaveColors[3]);
+        Serial.println("Microwave mode 3");
+        colorPart(microwaveLedStripPart, microwaveColors[3]);
         currentMicrowaveKnobState = 3;
       }
       break;
@@ -139,10 +207,12 @@ void loop() {
   }
 
   if (lightSwitch == LOW && currentLightSwitchState != 0) {
-    colorPart(3, mediumWhite);
+    Serial.println("Light on");
+    colorPart(lightLedStripPart, mediumWhite);
     currentLightSwitchState = 0;
   } else if (lightSwitch == HIGH && currentLightSwitchState != 1) {
-    colorPart(3, black);
+    Serial.println("Light off");
+    colorPart(lightLedStripPart, black);
     currentLightSwitchState = 1;
   }
 
@@ -183,5 +253,42 @@ void colorAll(uint32_t c) {
     strip.setPixelColor(i, c);
   }
   strip.show();
+}
+
+uint32_t getOvenColor(byte currentOvenMode, byte currentOvenHeat) {
+  uint32_t ovenColor;
+  Serial.print("Get oven color: currentOvenMode:");
+  Serial.print(currentOvenMode);
+  Serial.print(" currentOvenHeat: ");
+  Serial.print(currentOvenHeat);
+  Serial.println("");
+  
+  switch (currentOvenMode) {
+    case 0:
+      ovenColor = black;
+      Serial.print("Get oven color: black, heat: ");
+      Serial.print(currentOvenHeat);
+      Serial.println("");
+      break;
+    case 1:
+      ovenColor = ovenColorsRed[currentOvenHeat];
+      Serial.print("Get oven color: red, heat: ");
+      Serial.print(currentOvenHeat);
+      Serial.println("");
+      break;
+    case 2:
+      ovenColor = ovenColorsOrange[currentOvenHeat];
+      Serial.print("Get oven color: orange, heat: ");
+      Serial.print(currentOvenHeat);
+      Serial.println("");
+      break;
+    case 3:
+      ovenColor = ovenColorsYellow[currentOvenHeat];
+      Serial.print("Get oven color: yellow, heat: ");
+      Serial.print(currentOvenHeat);
+      Serial.println("");
+      break;
+  }
+  return ovenColor;
 }
 
