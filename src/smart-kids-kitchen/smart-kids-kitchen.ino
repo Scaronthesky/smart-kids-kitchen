@@ -7,7 +7,7 @@
 #define sdChipSelectPin 4
 #define loudSpeakerPin 9
 #define neoPixelPin 6
-#define numberOfLeds 60
+#define numberOfLeds 56
 
 // Setup Adafruit NeoPixel stripe
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
@@ -68,7 +68,7 @@ byte currentLightSwitchState = 0;
 void setup() {
 
   // Enable debug logging only if needed!
-  // If the Serial communication is enabled the tmrpcm playback does NOT work!
+  // If the Serial communication is enabled the tmrpcm playback does NOT work! Maybe baud port issue?
   // Serial.begin(9600);
 
   // Setup stripe
@@ -105,12 +105,12 @@ void loop() {
     tmrpcm.play("1.wav", 1);
   } else if ((currentOvenHeatKnobState == 0 || currentOvenModeKnobState == 0) && currentMicrowaveKnobState > 0 && !tmrpcm.isPlaying()) {
     //Serial.println("Play microwave on sound");
-    tmrpcm.play("2.wav", 1 );
+    tmrpcm.play("2.wav", 1);
   } else if (currentOvenHeatKnobState > 0 && currentOvenModeKnobState > 0 && currentMicrowaveKnobState > 0 && !tmrpcm.isPlaying()) {
     //Serial.println("Play oven and microwave on sound");
     tmrpcm.play("4.wav", 1);
-  }
-
+  } 
+  
   switch (ovenHeatKnob) {
     case 0:
       if (currentOvenHeatKnobState != 0) {
@@ -222,25 +222,21 @@ void loop() {
 
 }
 
-void playSound(char fileName) {
-  tmrpcm.play(fileName);
-}
-
 // Set one of three parts to a color
 void colorPart(byte part, uint32_t color) {
   byte firstLed, lastLed;
   switch (part) {
     case 1:
       firstLed = 0;
-      lastLed = 19;
+      lastLed = 15;
       break;
     case 2:
-      firstLed = 20;
-      lastLed = 39;
+      firstLed = 16;
+      lastLed = 35;
       break;
     case 3:
-      firstLed = 40;
-      lastLed = 59;
+      firstLed = 36;
+      lastLed = 55;
       break;
     default:
       return;
