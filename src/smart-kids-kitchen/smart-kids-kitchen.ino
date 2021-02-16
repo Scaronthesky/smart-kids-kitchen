@@ -2,6 +2,7 @@
 #include <Adafruit_NeoPixel.h>
 #include <SD.h>
 #include <TMRpcm.h>
+#include <RTClib.h>
 
 // Define pins
 #define sdChipSelectPin 4
@@ -26,6 +27,9 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(numberOfLeds, neoPixelPin, NEO_GRB +
 
 // Setup class for Wav file playback
 TMRpcm tmrpcm;
+
+// Setup class for real time clock;
+RTC_DS3231 rtc;
 
 // Initialize led stripe parts
 byte microwaveLedStripPart = 1;
@@ -69,7 +73,7 @@ void setup() {
 
   // Enable debug logging only if needed!
   // If the Serial communication is enabled the tmrpcm playback does NOT work! Maybe baud port issue?
-  // Serial.begin(9600);
+  //Serial.begin(9600);
 
   // Setup stripe
   strip.begin();
@@ -88,7 +92,24 @@ void setup() {
   }
   tmrpcm.volume(7);
   tmrpcm.quality(0);
+ 
+  if (! rtc.begin()) {
+    //Serial.println("Couldn't find RTC");
+    //Serial.flush();
+    abort();
+  }
 
+  if (rtc.lostPower()) {
+    Serial.println("RTC lost power, let's set the time!");
+    // When time needs to be set on a new device, or after a power loss, the
+    // following line sets the RTC to the date & time this sketch was compiled
+    // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // This line sets the RTC with an explicit date & time, for example to set
+    // January 21, 2014 at 3am you would call:
+     //rtc.adjust(DateTime(2021, 2, 16, 6, 59,0));
+  }
+   // Comment in to set the time
+  //rtc.adjust(DateTime(2021, 2, 15, 22, 27, 0));
 }
 
 void loop() {
@@ -102,14 +123,11 @@ void loop() {
 
   if (currentOvenHeatKnobState > 0 && currentOvenModeKnobState > 0 && currentMicrowaveKnobState == 0 && !tmrpcm.isPlaying()) {
     //Serial.println("Play oven on sound");
-    tmrpcm.play("1.wav", 1);
+    tmrpcm.play(const_cast<char*>("oven.wav"), 1);
   } else if ((currentOvenHeatKnobState == 0 || currentOvenModeKnobState == 0) && currentMicrowaveKnobState > 0 && !tmrpcm.isPlaying()) {
     //Serial.println("Play microwave on sound");
-    tmrpcm.play("2.wav", 1);
-  } else if (currentOvenHeatKnobState > 0 && currentOvenModeKnobState > 0 && currentMicrowaveKnobState > 0 && !tmrpcm.isPlaying()) {
-    //Serial.println("Play oven and microwave on sound");
-    tmrpcm.play("4.wav", 1);
-  } 
+    tmrpcm.play(const_cast<char*>("mcrwv.wav"), 1);
+  }   
   
   switch (ovenHeatKnob) {
     case 0:
@@ -220,6 +238,9 @@ void loop() {
     currentLightSwitchState = 1;
   }
 
+   DateTime now = rtc.now();
+   ringTheBell(now);
+
 }
 
 // Set one of three parts to a color
@@ -292,3 +313,83 @@ uint32_t getOvenColor(byte currentOvenMode, byte currentOvenHeat) {
   return ovenColor;
 }
 
+void ringTheBell (DateTime now) {
+    uint8_t month = now.month();
+    uint8_t day = now.day();
+    // Hour is 0-23 based
+    uint8_t hour = now.hour();
+    uint8_t minute = now.minute();
+    uint8_t second = now.second();
+    //Serial.print(now.year(), DEC);
+    //Serial.print('/');
+    //Serial.print(now.month(), DEC);
+    //Serial.print('/');
+    //Serial.print(now.day(), DEC);
+    //Serial.print(" at ");
+    //Serial.print(now.hour(), DEC);
+    //Serial.print(':');
+    //Serial.print(now.minute(), DEC);
+    //Serial.print(':');
+    //Serial.print(now.second(), DEC);
+    //Serial.println();
+    if (hour >= 7 && hour <= 19 && minute == 0 && second == 0) {
+       uint8_t soundHour = hour;
+       if (isDaylightSavingTime(now)) {
+         soundHour++;  
+       }
+      // Serial.println(soundHour);
+       playAnimalSound(soundHour);
+    }
+  
+}
+
+void playAnimalSound (uint8_t soundHour) {
+  if (soundHour == 7 && !tmrpcm.isPlaying()) {
+    //Serial.println("Play 7 hour sound");
+    tmrpcm.play(const_cast<char*>("7.wav"), 1);
+  } else if (soundHour == 8 && !tmrpcm.isPlaying()) {
+    tmrpcm.play(const_cast<char*>("8.wav"), 1);
+  } else if (soundHour == 9 && !tmrpcm.isPlaying()) {
+    tmrpcm.play(const_cast<char*>("9.wav"), 1);
+  } else if (soundHour == 10 && !tmrpcm.isPlaying()) {
+    tmrpcm.play(const_cast<char*>("10.wav"), 1);
+  } else if (soundHour == 11 && !tmrpcm.isPlaying()) {
+    tmrpcm.play(const_cast<char*>("11.wav"), 1);
+  } else if (soundHour == 12 && !tmrpcm.isPlaying()) {
+    tmrpcm.play(const_cast<char*>("12.wav"), 1);
+  } else if (soundHour == 13 && !tmrpcm.isPlaying()) {
+    tmrpcm.play(const_cast<char*>("13.wav"), 1);
+  } else if (soundHour == 14 && !tmrpcm.isPlaying()) {
+    tmrpcm.play(const_cast<char*>("14.wav"), 1);
+  } else if (soundHour == 15 && !tmrpcm.isPlaying()) {
+    tmrpcm.play(const_cast<char*>("15.wav"), 1);
+  } else if (soundHour == 16 && !tmrpcm.isPlaying()) {
+    tmrpcm.play(const_cast<char*>("16.wav"), 1);
+  } else if (soundHour == 17 && !tmrpcm.isPlaying()) {
+    tmrpcm.play(const_cast<char*>("17.wav"), 1);
+  } else if (soundHour == 18 && !tmrpcm.isPlaying()) {
+    tmrpcm.play(const_cast<char*>("18.wav"), 1);
+  } else if (soundHour == 19 && !tmrpcm.isPlaying()) {
+    tmrpcm.play(const_cast<char*>("19.wav"), 1);
+  }    
+}
+
+boolean isDaylightSavingTime(DateTime now) {
+  if (now >= DateTime(2021, 3, 28, 2, 0, 0) && now <= DateTime(2021, 10, 31, 2, 0, 0 )) {
+    return true;
+  } else if (now >= DateTime(2022, 3, 27, 2, 0, 0) && now <= DateTime(2022, 10, 30, 2, 0, 0 )) {
+    return true;
+  } else if (now >= DateTime(2023, 3, 26, 2, 0, 0) && now <= DateTime(2023, 10, 29, 2, 0, 0 )) {
+    return true;
+  } else if (now >= DateTime(2024, 3, 31, 2, 0, 0) && now <= DateTime(2024, 10, 27, 2, 0, 0 )) {
+    return true;
+  } else if (now >= DateTime(2025, 3, 30, 2, 0, 0) && now <= DateTime(2025, 10, 26, 2, 0, 0 )) {
+    return true;
+  } else if (now >= DateTime(2026, 3, 29, 2, 0, 0) && now <= DateTime(2026, 10, 25, 2, 0, 0 )) {
+    return true;
+  } else if (now >= DateTime(2027, 3, 28, 2, 0, 0) && now <= DateTime(2027, 10, 31, 2, 0, 0 )) {
+    return true;
+  } else {
+    return false;
+  }  
+}
